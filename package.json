@@ -1,0 +1,19 @@
+{
+  "name": "collegeinformationhub",
+  "version": "1.0.0",
+  "description": "This web application will help students to keep track of ongoing events happening in the college and allows creators to upload college related information for students to access ",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "college",
+    "information"
+  ],
+  "author": "agamjain",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3"
+  }
+}
