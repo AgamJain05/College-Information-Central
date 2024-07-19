@@ -10,8 +10,14 @@ import admin from 'firebase-admin'
 import Blog from './models/blog.models.js';
 import Comment from './models/comment.models.js';
 import Notification from './models/notifications.models.js';
+import multer from 'multer';
+import cloudinary from 'cloudinary';
 import serviceAccountkey from "./college-central-website-firebase-adminsdk-owwn4-e692d33373.json" assert { type: "json" }
 import { getAuth } from "firebase-admin/auth";
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import { IncomingForm } from 'formidable';
+
+
 
 const app = express();
 app.use(cors())
@@ -32,8 +38,35 @@ app.use(cookieParser())
 
 
 
+// Cloudinary setup
 
 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+// Configure multer to use Cloudinary for storage
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'college', // Specify the folder name in Cloudinary
+      format: async (req, file) => 'png', // Set file format
+      public_id: (req, file) => 'computed-filename-using-file', // Use file details to set a unique name
+    },
+  });
+// const generateUploadURL = async (file) => {
+//     try {
+//         const result = await cloudinary.uploader.upload(file.path, {
+//             resource_type: 'image',
+//             folder: 'college',
+//         });
+
+//         return result.secure_url;
+//     } catch (error) {
+//         throw new Error(error.message);
+//     }
+// };
 
 const verifyJWT = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -69,7 +102,56 @@ const generateUsername = async (email) => {
     isUniqueUsername ? username += nanoid().substring(0, 5) : ""
     return username;
 }
+// const parser = multer({ storage: storage });
 
+// app.post('/upload', parser.single('image'), (req, res) => {
+//     if (req.file) {
+//       // File is uploaded successfully
+//       res.json({ url: req.file.path });
+//     } else {
+//       // Handle the error if the file wasn't uploaded
+//       res.status(500).json({ error: 'File upload failed' });
+//     }
+//   });
+// app.get('/get-upload-url', (req, res) => {
+//     const form = new IncomingForm();
+//     form.parse(req, (err, fields, files) => {
+//         if (err) {
+//             res.status(500).json({ error: err.message });
+//             return;
+//         }
+//         // Assuming the image is the first file
+//         const file = files.image.path;
+//     cloudinary.v2.uploader.upload(file, (error, result) => {
+//       if (error) {
+//         res.status(500).json({ error: 'Cloudinary upload error' });
+//         return;
+//       }
+//       res.json({ url: result.secure_url });
+//     });
+//     });
+// });
+// app.get('/get-upload-url', upload.single('image'), async (req, res) => {
+//     try {
+//         const imageUrl = await generateUploadURL(req.file);
+//         console.log(imageUrl);
+//         res.status(200).json({ imageUrl });
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+// app.post('/get-upload-url', upload.single('image'), async (req, res) => {
+//     try {
+//         if (!req.file) {
+//             return res.status(400).json({ error: 'No file uploaded' });
+//         }
+//         const filePath = req.file.path;
+//         const url = await generateUploadURL(filePath);
+//         res.status(200).json({ imageUrl: url });
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
 app.post('/signup', (req, res) => {
     console.log(req.body)
     let { fullname, email, password } = req.body;
@@ -319,9 +401,10 @@ app.post("/search-blogs-count", (req, res) => {
 
 })
 app.post("/create-blog", verifyJWT ,(req, res) => {
-    let authorId = req.user;
+    console.log("req.user:", req.user); // Log the req.user object to understand its structure
+    let authorId = req.user.id;
     let { title, des ,banner,tags ,content ,draft ,id } = req.body;
-
+    console.log("Received banner:", req.body.banner); // Log the banner data
     if(!title.length) {
         return res.status(403).json({ error: "You must Provide a title" });
     }
@@ -330,9 +413,9 @@ app.post("/create-blog", verifyJWT ,(req, res) => {
         if(!des.length || des.length > 100) {
             return res.status(403).json({ error: "You must Provide a Blog Description under 100 characters" });
         }
-        // if(!banner.length) {
-        //     return res.status(400).json({ error: "Banner is required" });
-        // }
+        if(!banner.length) {
+            return res.status(400).json({ error: "Banner is required" });
+        }
         if(!tags.length || tags.length > 10) {
             return res.status(403).json({ error: "Tags are required, Max 10" });
         }
@@ -549,7 +632,7 @@ app.post("/get-blog-comments", (req, res) => {
     })
 
 })
-server.post("/notifications", verifyJWT, (req, res) => {
+app.post("/notifications", verifyJWT, (req, res) => {
     let user_id = req.user;
 
     let { page, filter, deletedDocCount } = req.body;
