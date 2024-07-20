@@ -22,6 +22,29 @@ import { IncomingForm } from 'formidable';
 const app = express();
 app.use(cors())
 
+
+// Allowing Multiple Origins
+
+// const allowedOrigins = [
+//     'http://localhost:5173', // Local development on PC
+//     'http://192.168.29.240:5173' // Access from mobile device
+//   ];
+  
+//   app.use(cors({
+//     origin: function (origin, callback) {
+//       if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+//         callback(null, true);
+//       } else {
+//         callback(new Error('Not allowed by CORS'));
+//       }
+//     }
+//   }));
+
+
+
+// app.use(cors({
+//     origin: 'http://192.168.29.240:5173', // Replace with your frontend's IP address and port
+//   }));
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccountkey)
 });
@@ -679,7 +702,7 @@ app.post("/notifications", verifyJWT, (req, res) => {
 })
 app.post("/user-written-blogs", verifyJWT, (req, res) => {
 
-    let user_id = req.user;
+    let user_id = req.user.id;
 
     let { page, draft, query, deletedDocCount } = req.body;
 
@@ -699,6 +722,23 @@ app.post("/user-written-blogs", verifyJWT, (req, res) => {
         return res.status(200).json({ blogs })
     })
     .catch(err => {
+        return res.status(500).json({ error: err.message });
+    })
+
+})
+
+app.post("/user-written-blogs-count", verifyJWT, (req, res) => {
+
+    let user_id = req.user.id;
+
+    let { draft, query } = req.body;
+
+    Blog.countDocuments({ author: user_id, draft, title: new RegExp(query, 'i') })
+    .then(count => {
+        return res.status(200).json({ totalDocs: count })
+    })
+    .catch(err => {
+        console.log(err.message);
         return res.status(500).json({ error: err.message });
     })
 
