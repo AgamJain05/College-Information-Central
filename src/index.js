@@ -11,7 +11,11 @@ dotenv.config({
 
 // const server = express()
 
-
+// checking if the server is running on mobile or not
+// app.get('/api/endpoint', (req, res) => {
+//     res.json({ message: 'Hello from backend!' });
+//   });
+  
 
 
 
@@ -25,6 +29,13 @@ connectDB()
       
     
 })
+
+// .then(() => {
+//     const PORT = process.env.PORT || 8000;
+//     app.listen(PORT, '0.0.0.0', () => {
+//         console.log(`⚙️ Server is running at http://0.0.0.0:${PORT}`);
+//     });
+// })
 .catch((err) => {
     console.log("MONGO db connection failed !!! ", err);
 })
