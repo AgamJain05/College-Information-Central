@@ -62,13 +62,16 @@ const CommentsContainer = () => {
             <CommentField action="comment" />
 
             {
+                
                 commentsArr && commentsArr.length ?
                 commentsArr.map((comment, i) => {
+                    console.log(`Comment ${i}:`, comment); // 2. Inside the map function
                     return <AnimationWrapper key={i}>
                         <CommentCard index={i} leftVal={comment.childrenLevel * 4} commentData={comment} />
                     </AnimationWrapper>
                 }) : <NoDataMessage message="No Comments" />
             }
+
 
             {
                 total_parent_comments > totalParentCommentsLoaded ?
