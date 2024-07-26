@@ -7,6 +7,7 @@ import Loader from "../components/loader.component";
 import BlogPostCard from "../components/blog-post-component";
 import AnimationWrapper from "../common/pageanimation";
 import NoDataComponent from "../components/No-Data-component";
+import NoDataMessage from "../components/No-Data-component";
 import LoadMoreDataBtn from "../components/load-more.component";
 import { filterPaginationData } from "../common/filter-pagination-data";
 import UserCard from "../components/usercard.component";
