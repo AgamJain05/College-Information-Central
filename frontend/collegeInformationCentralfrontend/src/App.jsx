@@ -9,6 +9,10 @@ import ProfilePage from './pages/profile.page';
 import BlogPage from './pages/blog.page';
 import SideNav from './components/sidenavbar.component';
 import ManageBlogs from './pages/manage-blogs.page';
+import Notifications from './pages/notifications.page';
+import EditProfile from './pages/edit-profile.page';
+import ChangePassword from './pages/change-password.page';
+
 import {
   Route,
   Routes,
@@ -17,17 +21,37 @@ import {
 import Editor from './pages/editor.pages';
 
 export const Usercontext = createContext();
+export const ThemeContext = createContext({});
 
+const darkThemePreference = () => window.matchMedia("(prefers-color-scheme: light)").matches;
 function App() {
   const [userAuth, setUserAuth] = useState({});
+  const [ theme, setTheme ] = useState(() => darkThemePreference() ? "dark" : "light" );
 
   useEffect(() => {
-    const userInSession = lookInSession("user");
-    const userData = userInSession ? JSON.parse(userInSession) : { access_token: null };
-    setUserAuth(userData);
-  }, []);  
+
+    let userInSession = lookInSession("user");
+    let themeInSession = lookInSession("theme");
+
+    userInSession ? setUserAuth(JSON.parse(userInSession)) : setUserAuth({ access_token: null })
+    
+    if (themeInSession) {
+        setTheme(() => {
+
+            document.body.setAttribute('data-theme', themeInSession);
+
+            return themeInSession;
+        
+        })
+    } else {
+        document.body.setAttribute('data-theme', theme)
+    }
+
+}, []);  
 
   return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+
     <Usercontext.Provider value={{ userAuth, setUserAuth }}>
       <Routes>
         <Route path="/editor" element={<Editor />} />
@@ -36,12 +60,12 @@ function App() {
           <Route index element={<HomePage/>} />
           <Route path="dashboard" element={<SideNav />} > 
               <Route path="blogs" element={<ManageBlogs />} />
-              {/* <Route path="notifications" element={<Notifications />} /> */}
+              <Route path="notifications" element={<Notifications />} />
           </Route>
           <Route path="settings" element={<SideNav />} >  
-              {/* <Route path="edit-profile" element={<EditProfile />} /> */}
-              {/* <Route path="change-password" element={<ChangePassword />} /> */}
-              </Route>
+              { <Route path="edit-profile" element={<EditProfile />} />}
+              {<Route path="change-password" element={<ChangePassword />} />}
+          </Route>
           <Route path="signin" element={<UserAuthForm type="sign-in" />} />
           <Route path="signup" element={<UserAuthForm type="sign-up" />} />
           <Route path = "/search/:query" element = {<SearchPage />} />
@@ -52,6 +76,7 @@ function App() {
         </Route>
       </Routes>
     </Usercontext.Provider>
+    </ThemeContext.Provider>
   );
 }
 
