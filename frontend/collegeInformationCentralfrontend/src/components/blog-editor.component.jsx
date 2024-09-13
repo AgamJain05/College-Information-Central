@@ -1,20 +1,14 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-// import lightLogo from "../imgs/logo-light.png";
-// import darkLogo from "../imgs/logo-dark.png";
 import AnimationWrapper from "../common/pageanimation"
-// import lightBanner from "../imgs/blog banner light.png";
-// import darkBanner from "../imgs/blog banner dark.png";
-// import { uploadImage } from "../common/aws";
-import logo from "../imgs/logo.png";
-
-
-
+import lightLogo from "../imgs/logo-light.png";
+import darkLogo from "../imgs/logo-dark.png";
+import lightBanner from "../imgs/blog banner light.png";
+import darkBanner from "../imgs/blog banner dark.png";
 import { useContext, useEffect } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { EditorContext } from "../pages/editor.pages";
 import EditorJS from "@editorjs/editorjs";
-
-
+import { ThemeContext } from "../App";
 import Tools from './tools.components';
 import axios from "axios";
 import { Usercontext } from "../App";
@@ -29,7 +23,7 @@ const BlogEditor = () => {
     let { blog_id } = useParams();
 
     let navigate = useNavigate();
-
+    let { theme } = useContext(ThemeContext);
    
 
     // useEffect
@@ -191,12 +185,16 @@ const BlogEditor = () => {
             })
         }
     }
+    const handleError = (e) => {
+        let img = e.target;
 
+        img.src = theme == "light" ? lightBanner : darkBanner;
+    }
     return (
         <>
             <nav className="navbar">
             <Link to="/" className="flex-none w-10">
-                    <img src={logo} />
+                    <img src={ theme == "light" ? darkLogo : lightLogo } />
                 </Link>
                 <p className="max-md:hidden text-black line-clamp-1 w-full">
                     { title.length ? title : "New Blog" }
@@ -226,6 +224,7 @@ const BlogEditor = () => {
                                 <img 
                                     src={banner}
                                     className="z-20"
+                                    onError={handleError}
                                     // onError={handleError}
                                 />
                                 <input 

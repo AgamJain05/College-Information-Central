@@ -12,6 +12,7 @@ import ManageBlogs from './pages/manage-blogs.page';
 import Notifications from './pages/notifications.page';
 import EditProfile from './pages/edit-profile.page';
 import ChangePassword from './pages/change-password.page';
+import CollegeYears from './pages/meet-up.page';
 
 import {
   Route,
@@ -68,6 +69,7 @@ function App() {
           </Route>
           <Route path="signin" element={<UserAuthForm type="sign-in" />} />
           <Route path="signup" element={<UserAuthForm type="sign-up" />} />
+          <Route path="meetup" element={<CollegeYears />} />
           <Route path = "/search/:query" element = {<SearchPage />} />
           <Route path = "*" element = {<PageNotFound />}/>
           <Route path = "/user/:id" element = {<ProfilePage />}/>

@@ -10,12 +10,14 @@ import admin from 'firebase-admin'
 import Blog from './models/blog.models.js';
 import Comment from './models/comment.models.js';
 import Notification from './models/notifications.models.js';
-import multer from 'multer';
+import linkRoutes from './routes/link.routes.js';
 import cloudinary from 'cloudinary';
-import serviceAccountkey from "./college-central-website-firebase-adminsdk-owwn4-e692d33373.json" assert { type: "json" }
+// import serviceAccountkey from "./college-central-website-firebase-adminsdk-owwn4-e692d33373.json" assert { type: "json" }
+import serviceAccountKey from './serviceAccountKey.js';
 import { getAuth } from "firebase-admin/auth";
+
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { IncomingForm } from 'formidable';
+
 
 
 
@@ -26,8 +28,8 @@ app.use(cors())
 // Allowing Multiple Origins
 
 // const allowedOrigins = [
-//     'http://localhost:5173', // Local development on PC
-//     'http://192.168.29.240:5173' // Access from mobile device
+//     'http://', // Local development on PC
+//     'http://' // Access from mobile device
 //   ];
   
 //   app.use(cors({
@@ -43,22 +45,27 @@ app.use(cors())
 
 
 // app.use(cors({
-//     origin: 'http://192.168.29.240:5173', // Replace with your frontend's IP address and port
+//     origin: '', // Replace with your frontend's IP address and port
 //   }));
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccountkey)
+    credential: admin.credential.cert(serviceAccountKey)
 });
 // app.use(cors({
 //     origin: process.env.CORS_ORIGIN,
 //     credentials: true
 // }))
-let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
+
+
+//Feature 1: Only college students can make this website
+// let emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; // regex for email
+let emailRegex = /^\w+([\.-]?\w+)*@ietdavv\.edu\.in$/;
+
 let passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,20}$/; // regex for password
 app.use(express.json({ limit: "16kb" }))
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.static("public"))
 app.use(cookieParser())
-
+app.use('/api/links', linkRoutes);
 
 
 // Cloudinary setup
@@ -176,7 +183,7 @@ const generateUsername = async (email) => {
 //     }
 // });
 app.post('/signup', (req, res) => {
-    console.log(req.body)
+    // console.log(req.body)
     let { fullname, email, password } = req.body;
     // Form Validation
     if (fullname) {
@@ -189,7 +196,7 @@ app.post('/signup', (req, res) => {
 
     }
     if (!emailRegex.test(email)) {
-        return res.status(400).json({ "error": "Invalid Email" });
+        return res.status(400).json({ "error": "Enter your college email address" });
 
     }
 
@@ -574,7 +581,7 @@ app.post("/isliked-by-user", verifyJWT, (req, res) => {
 
 app.post("/add-comment", verifyJWT, (req, res) => {
 
-    let user_id = req.user;
+    let user_id = req.user.id;
 
     let { _id, comment, blog_author, replying_to, notification_id } = req.body;
 
@@ -655,8 +662,39 @@ app.post("/get-blog-comments", (req, res) => {
     })
 
 })
+app.post("/get-replies", (req, res) => {
+
+    let { _id, skip } = req.body;
+
+    let maxLimit = 5;
+
+    Comment.findOne({ _id })
+    .populate({
+        path: "children",
+        options: {
+            limit: maxLimit,
+            skip: skip,
+            sort: { 'commentedAt': -1 }
+        },
+        populate: {
+            path: 'commented_by',
+            select: "personal_info.profile_img personal_info.fullname personal_info.username"
+        },
+        select: "-blog_id -updatedAt"
+    })
+    .select("children")
+    .then(doc => {
+        console.log(doc);
+        return res.status(200).json({ replies: doc.children })
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message })
+    })
+
+})
+
 app.post("/notifications", verifyJWT, (req, res) => {
-    let user_id = req.user;
+    let user_id = req.user.id;
 
     let { page, filter, deletedDocCount } = req.body;
 
@@ -697,6 +735,28 @@ app.post("/notifications", verifyJWT, (req, res) => {
     .catch(err => {
         console.log(err.message);
         return res.status(500).json({ error: err.message });
+    })
+
+})
+
+app.post("/all-notifications-count", verifyJWT, (req, res) => {
+
+    let user_id = req.user.id;
+
+    let { filter } = req.body;
+
+    let findQuery = { notification_for: user_id, user: { $ne: user_id } }
+
+    if(filter != 'all'){
+        findQuery.type = filter;
+    }
+
+    Notification.countDocuments(findQuery)
+    .then(count => {
+        return res.status(200).json({ totalDocs: count })
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message })
     })
 
 })
@@ -743,6 +803,164 @@ app.post("/user-written-blogs-count", verifyJWT, (req, res) => {
     })
 
 })
+
+app.post("/delete-blog", verifyJWT, (req, res) => {
+
+    let user_id = req.user.id;
+    let { blog_id } = req.body;
+
+    Blog.findOneAndDelete({ blog_id })
+    .then(blog => {
+        
+        Notification.deleteMany({ blog: blog._id }).then(data => console.log('notifications deleted'));
+
+        Comment.deleteMany({ blog_id: blog._id }).then(data => console.log('comments deleted'));
+
+        User.findOneAndUpdate({ _id: user_id }, { $pull: { blog: blog._id }, $inc: { "account_info.total_posts": -1 } })
+        .then(user => console.log('Blog deleted'));
+
+        return res.status(200).json({ status: 'done' });
+
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message })
+    })
+
+})
+app.get("/new-notification", verifyJWT, (req, res) => {
+
+    let user_id = req.user.id;
+
+    Notification.exists({ notification_for: user_id, seen: false, user: { $ne: user_id } })
+    .then(result => {
+        if( result ){
+            return res.status(200).json({ new_notification_available: true })
+        } else{
+            return res.status(200).json({ new_notification_available: false })
+        }
+    })
+    .catch(err => {
+        console.log(err.message);
+        return res.status(500).json({ error: err.message })
+    })
+
+})
+app.post("/update-profile-img", verifyJWT, (req, res) => {
+
+    let { url } = req.body;
+
+    User.findOneAndUpdate({ _id: req.user.id }, { "personal_info.profile_img": url })
+    .then(() => {
+        return res.status(200).json({ profile_img: url })
+    })
+    .catch(err => {
+        return res.status(500).json({ error: err.message })
+    })
+
+})
+app.post("/update-profile", verifyJWT, (req, res) => {
+
+    let { username, bio, social_links } = req.body;
+
+    let bioLimit = 150;
+
+    if(username.length < 3){
+        return res.status(403).json({ error: "Username should be at least 3 letters long" });
+    }
+
+    if(bio.length > bioLimit){
+        return res.status(403).json({ error: `Bio should not be more than ${bioLimit} characters` });
+    }
+
+    let socialLinksArr = Object.keys(social_links);
+
+    try {
+
+        for(let i = 0; i < socialLinksArr.length; i++){
+            if(social_links[socialLinksArr[i]].length){
+                let hostname = new URL(social_links[socialLinksArr[i]]).hostname; 
+
+                if(!hostname.includes(`${socialLinksArr[i]}.com`) && socialLinksArr[i] != 'website'){
+                    return res.status(403).json({ error: `${socialLinksArr[i]} link is invalid. You must enter a full link` })
+                }
+
+            }
+        }
+
+    } catch (err) {
+        return res.status(500).json({ error: "You must provide full social links with http(s) included" })
+    }
+
+    let updateObj = {
+        "personal_info.username": username,
+        "personal_info.bio": bio,
+        social_links
+    }
+
+    User.findOneAndUpdate({ _id: req.user.id }, updateObj, {
+        runValidators: true
+    })
+    .then(() => {
+        return res.status(200).json({ username })
+    })
+    .catch(err => {
+        if(err.code == 11000){
+            return res.status(409).json({ error: "username is already taken" })
+        }
+        return res.status(500).json({ error: err.message })
+    })
+
+})
+app.post("/change-password", verifyJWT, (req, res) => {
+
+    let { currentPassword, newPassword } = req.body; 
+
+    if(!passwordRegex.test(currentPassword) || !passwordRegex.test(newPassword)){
+        return res.status(403).json({ error: "Password should be 6 to 20 characters long with a numeric, 1 lowercase and 1 uppercase letters" })
+    }
+
+    User.findOne({ _id: req.user.id })
+    .then((user) => {
+
+        if(user.google_auth){
+            return res.status(403).json({ error: "You can't change account's password because you logged in through google" })
+        }
+
+        bcrypt.compare(currentPassword, user.personal_info.password, (err, result) => {
+            if(err) {
+                return res.status(500).json({ error: "Some error occured while changing the password, please try again later" })
+            }
+
+            if(!result){
+                return res.status(403).json({ error: "Incorrect current password" })
+            }
+
+            bcrypt.hash(newPassword, 10, (err, hashed_password) => {
+
+                User.findOneAndUpdate({ _id: req.user.id }, { "personal_info.password": hashed_password })
+                .then((u) => {
+                    return res.status(200).json({ status: 'password changed' })
+                })
+                .catch(err => {
+                    return res.status(500).json({ error: 'Some error occured while saving new password, please try again later' })
+                })
+
+            })
+        })
+
+    })
+    .catch(err => {
+        console.log(err);
+        res.status(500).json({ error : "User not found" })
+    })
+
+})
+
+
+app.use('/api/links', linkRoutes);
+
+
+
 // app.use((req, res, next) => {
 //     res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
 //     next();
