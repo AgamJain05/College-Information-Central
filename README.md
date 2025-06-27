@@ -9,6 +9,9 @@ A comprehensive web application designed exclusively for college students to sha
 - **Dual Authentication**: Email/password and Google OAuth integration
 - **JWT-based Security**: Secure token-based authentication system
 - **Firebase Integration**: Google authentication powered by Firebase
+![Screenshot 2025-06-27 131043](https://github.com/user-attachments/assets/5faa705a-c615-48d3-af72-b5b300e00408)
+![Screenshot 2025-06-27 131043](https://github.com/user-attachments/assets/15843682-970d-4281-8c12-e71cb81aed18)
+![Screenshot 2025-06-27 125534](https://github.com/user-attachments/assets/c1693878-ab51-40e7-a9f9-ee82cfb751e4)
 
 ### 📝 Blog Management System
 - **Rich Text Editor**: Powered by EditorJS with support for:
