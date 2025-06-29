@@ -2,6 +2,8 @@
 
 A comprehensive web application designed exclusively for college students to share information, create blogs, and stay connected with ongoing events and academic resources.
 
+## Live Link
+https://collegeinformationcentral.netlify.app/
 ## 🌟 Features
 
 ### 🔐 Authentication & Authorization
